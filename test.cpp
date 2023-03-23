@@ -79,8 +79,9 @@ int main(int argc, char **argv) {
 
     /* as a test, we add symbols that the compiled program can use.
        You may also open a dll with tcc_add_dll() and use symbols from that */
-    tcc_add_symbol(s, "add", add);
+    tcc_add_symbol(s, "add", (const void*)add);
     tcc_add_symbol(s, "hello", hello);
+    //candidate function not viable: no known conversion from 'int (int, int)' to 'const void *' for 3rd argument
 
     /* relocate the code */
     if (tcc_relocate(s, TCC_RELOCATE_AUTO) < 0)
