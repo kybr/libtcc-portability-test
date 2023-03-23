@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.12)
+project(TEST)
+add_executable(clavm test.cpp)
+target_include_directories(clavm PUBLIC tcc/libtcc)
+target_link_directories(clavm PUBLIC tcc)
+target_link_libraries(clavm libtcc)
