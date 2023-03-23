@@ -1,3 +1,3 @@
 cd tcc
-..\build\Debug\clavm.exe
+..\build\Debug\test.exe
 cd ..
