@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
         return 1;
 
     /* get entry symbol */
-    func = reinterpret_cast<int(__cdecl*)(int)>(tcc_get_symbol(s, "foo"));
+    func = reinterpret_cast<int(*)(int)>(tcc_get_symbol(s, "foo"));
     if (!func)
         return 1;
 

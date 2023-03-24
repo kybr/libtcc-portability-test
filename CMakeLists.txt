@@ -3,11 +3,7 @@ project(TEST)
 add_executable(test test.cpp)
 
 
-if(UNIX AND NOT APPLE)
-# linux
-endif()
-
-if(APPLE)
+if(UNIX)
 target_include_directories(test PUBLIC tcc/include)
 target_link_directories(test PUBLIC tcc/lib)
 target_link_libraries(test tcc)
