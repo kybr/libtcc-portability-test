@@ -1,18 +1,15 @@
+#include <cassert>
 #include <cstdlib>
 #include <iostream>
-#include <cassert>
 
 #include "libtcc.h"
 
 void handle_error(void *opaque, const char *msg) {
-    fprintf(reinterpret_cast<FILE*>(opaque), "%s\n", msg);
+  fprintf(reinterpret_cast<FILE *>(opaque), "%s\n", msg);
 }
 
 /* this function is called by the generated code */
-int add(int a, int b)
-{
-    return a + b;
-}
+int add(int a, int b) { return a + b; }
 
 /* this strinc is referenced by the generated code */
 const char hello[] = "Hello World!";
@@ -40,63 +37,61 @@ int foo(int n) {
 )";
 
 int main(int argc, char **argv) {
-    TCCState *s;
-    int i;
-    int (*func)(int);
+  TCCState *s;
+  int i;
+  int (*func)(int);
 
-    s = tcc_new();
-    if (!s) {
-        fprintf(stderr, "Could not create tcc state\n");
-        exit(1);
+  s = tcc_new();
+  if (!s) {
+    fprintf(stderr, "Could not create tcc state\n");
+    exit(1);
+  }
+
+  assert(tcc_get_error_func(s) == NULL);
+  assert(tcc_get_error_opaque(s) == NULL);
+
+  tcc_set_error_func(s, stderr, handle_error);
+
+  assert(tcc_get_error_func(s) == handle_error);
+  assert(tcc_get_error_opaque(s) == stderr);
+
+  /* if tcclib.h and libtcc1.a are not installed, where can we find them */
+  for (i = 1; i < argc; ++i) {
+    char *a = argv[i];
+    if (a[0] == '-') {
+      if (a[1] == 'B')
+        tcc_set_lib_path(s, a + 2);
+      else if (a[1] == 'I')
+        tcc_add_include_path(s, a + 2);
+      else if (a[1] == 'L')
+        tcc_add_library_path(s, a + 2);
     }
+  }
 
-    assert(tcc_get_error_func(s) == NULL);
-    assert(tcc_get_error_opaque(s) == NULL);
+  /* MUST BE CALLED before any compilation */
+  tcc_set_output_type(s, TCC_OUTPUT_MEMORY);
 
-    tcc_set_error_func(s, stderr, handle_error);
+  if (tcc_compile_string(s, my_program) == -1) return 1;
 
-    assert(tcc_get_error_func(s) == handle_error);
-    assert(tcc_get_error_opaque(s) == stderr);
+  /* as a test, we add symbols that the compiled program can use.
+     You may also open a dll with tcc_add_dll() and use symbols from that */
+  tcc_add_symbol(s, "add", (const void *)add);
+  tcc_add_symbol(s, "hello", hello);
+  // candidate function not viable: no known conversion from 'int (int, int)' to
+  // 'const void *' for 3rd argument
 
-    /* if tcclib.h and libtcc1.a are not installed, where can we find them */
-    for (i = 1; i < argc; ++i) {
-        char *a = argv[i];
-        if (a[0] == '-') {
-            if (a[1] == 'B')
-                tcc_set_lib_path(s, a+2);
-            else if (a[1] == 'I')
-                tcc_add_include_path(s, a+2);
-            else if (a[1] == 'L')
-                tcc_add_library_path(s, a+2);
-        }
-    }
+  /* relocate the code */
+  if (tcc_relocate(s, TCC_RELOCATE_AUTO) < 0) return 1;
 
-    /* MUST BE CALLED before any compilation */
-    tcc_set_output_type(s, TCC_OUTPUT_MEMORY);
+  /* get entry symbol */
+  func = reinterpret_cast<int (*)(int)>(tcc_get_symbol(s, "foo"));
+  if (!func) return 1;
 
-    if (tcc_compile_string(s, my_program) == -1)
-        return 1;
+  /* run the code */
+  func(32);
 
-    /* as a test, we add symbols that the compiled program can use.
-       You may also open a dll with tcc_add_dll() and use symbols from that */
-    tcc_add_symbol(s, "add", (const void*)add);
-    tcc_add_symbol(s, "hello", hello);
-    //candidate function not viable: no known conversion from 'int (int, int)' to 'const void *' for 3rd argument
+  /* delete the state */
+  tcc_delete(s);
 
-    /* relocate the code */
-    if (tcc_relocate(s, TCC_RELOCATE_AUTO) < 0)
-        return 1;
-
-    /* get entry symbol */
-    func = reinterpret_cast<int(*)(int)>(tcc_get_symbol(s, "foo"));
-    if (!func)
-        return 1;
-
-    /* run the code */
-    func(32);
-
-    /* delete the state */
-    tcc_delete(s);
-
-    return 0;
+  return 0;
 }
