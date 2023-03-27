@@ -81,17 +81,23 @@ int main(int argc, char **argv) {
   // 'const void *' for 3rd argument
 
   /* relocate the code */
-  if (tcc_relocate(s, TCC_RELOCATE_AUTO) < 0) return 1;
+  int size = tcc_relocate(s, nullptr);
+  void *mem = nullptr;
+  if (size <= 0) return 1;
+  mem = malloc(size);
+  if (tcc_relocate(s, mem) < 0) return 1;
 
   /* get entry symbol */
   func = reinterpret_cast<int (*)(int)>(tcc_get_symbol(s, "foo"));
   if (!func) return 1;
 
-  /* run the code */
-  func(32);
-
   /* delete the state */
   tcc_delete(s);
+
+  // run the code
+  func(32);
+
+  free(mem);
 
   return 0;
 }
